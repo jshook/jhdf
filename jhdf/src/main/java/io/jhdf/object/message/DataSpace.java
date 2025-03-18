@@ -22,138 +22,178 @@ import java.util.stream.IntStream;
 
 public class DataSpace {
 
-	private static final int MAX_SIZES_PRESENT_BIT = 0;
-	private final byte version;
-	private final boolean maxSizesPresent;
-	private final int[] dimensions;
-	private final long[] maxSizes;
-	private final byte type; // TODO enum SCALAR SIMPLE NULL
+  private static final int MAX_SIZES_PRESENT_BIT = 0;
+  private final byte version;
+  private final boolean maxSizesPresent;
+  private final int[] dimensions;
+  private final long[] maxSizes;
+  private final byte type; // TODO enum SCALAR SIMPLE NULL
 
-	private DataSpace(ByteBuffer bb, Superblock sb) {
+  private DataSpace(ByteBuffer bb, Superblock sb) {
 
-		version = bb.get();
-		int numberOfDimensions = bb.get();
-		byte[] flagBits = new byte[1];
-		bb.get(flagBits);
-		BitSet flags = BitSet.valueOf(flagBits);
-		maxSizesPresent = flags.get(MAX_SIZES_PRESENT_BIT);
+    version = bb.get();
+    int numberOfDimensions = bb.get();
+    byte[] flagBits = new byte[1];
+    bb.get(flagBits);
+    BitSet flags = BitSet.valueOf(flagBits);
+    maxSizesPresent = flags.get(MAX_SIZES_PRESENT_BIT);
 
-		if (version == 1) {
-			// Skip 5 reserved bytes
-			bb.position(bb.position() + 5);
-			type = -1;
-		} else if (version == 2) {
-			type = bb.get();
-		} else {
-			throw new HdfException("Unrecognized version = " + version);
-		}
+    if (version == 1) {
+      // Skip 5 reserved bytes
+      bb.position(bb.position() + 5);
+      type = -1;
+    } else if (version == 2) {
+      type = bb.get();
+    } else {
+      throw new HdfException("Unrecognized version = " + version);
+    }
 
-		// Dimensions sizes
-		if (numberOfDimensions != 0) {
-			dimensions = new int[numberOfDimensions];
-			for (int i = 0; i < numberOfDimensions; i++) {
-				dimensions[i] = Utils.readBytesAsUnsignedInt(bb, sb.getSizeOfLengths());
-			}
-		} else {
-			dimensions = new int[0];
-		}
+    // Dimensions sizes
+    if (numberOfDimensions != 0) {
+      dimensions = new int[numberOfDimensions];
+      for (int i = 0; i < numberOfDimensions; i++) {
+        dimensions[i] = Utils.readBytesAsUnsignedInt(bb, sb.getSizeOfLengths());
+      }
+    } else {
+      dimensions = new int[0];
+    }
 
-		// Max dimension sizes
-		if (maxSizesPresent) {
-			maxSizes = new long[numberOfDimensions];
-			for (int i = 0; i < numberOfDimensions; i++) {
-				maxSizes[i] = Utils.readBytesAsUnsignedLong(bb, sb.getSizeOfLengths());
-			}
-		} else {
-			maxSizes = Arrays.stream(dimensions).asLongStream().toArray();
-		}
+    // Max dimension sizes
+    if (maxSizesPresent) {
+      maxSizes = new long[numberOfDimensions];
+      for (int i = 0; i < numberOfDimensions; i++) {
+        maxSizes[i] = Utils.readBytesAsUnsignedLong(bb, sb.getSizeOfLengths());
+      }
+    } else {
+      maxSizes = Arrays.stream(dimensions).asLongStream().toArray();
+    }
 
-		// Permutation indices - Note never implemented in HDF library!
-	}
+    // Permutation indices - Note never implemented in HDF library!
+  }
 
-	private DataSpace(byte version, boolean maxSizesPresent, int[] dimensions, long[] maxSizes, byte type) {
-		this.version = version;
-		this.maxSizesPresent = maxSizesPresent;
-		this.dimensions = dimensions;
-		this.maxSizes = maxSizes;
-		this.type = type;
-	}
+  private DataSpace(
+      byte version,
+      boolean maxSizesPresent,
+      int[] dimensions,
+      long[] maxSizes,
+      byte type
+  )
+  {
+    this.version = version;
+    this.maxSizesPresent = maxSizesPresent;
+    this.dimensions = dimensions;
+    this.maxSizes = maxSizes;
+    this.type = type;
+  }
 
-	public static DataSpace readDataSpace(ByteBuffer bb, Superblock sb) {
-		return new DataSpace(bb, sb);
-	}
+  public static DataSpace readDataSpace(ByteBuffer bb, Superblock sb) {
+    return new DataSpace(bb, sb);
+  }
 
-	public static DataSpace fromObject(Object data) {
-		if(data.getClass().isArray()) {
-			int[] dimensions1 = Utils.getDimensions(data);
-			return new DataSpace((byte) 2,
-				false,
-				dimensions1,
-				Arrays.stream(dimensions1).asLongStream().toArray(),
-				(byte) 1 // Simple
-			);
-		} else {
-			// Scalar
-			return new DataSpace((byte) 2,
-				false,
-				new int[] {},
-				new long[] {},
-				(byte) 0); // Scalar
-		}
-		// TODO null/empty datasets
-	}
+  public static DataSpace fromObject(Object data) {
+    if (data.getClass().isArray()) {
+      int[] dimensions1 = Utils.getDimensions(data);
+      return new DataSpace(
+          (byte) 2,
+          false,
+          dimensions1,
+          Arrays.stream(dimensions1).asLongStream().toArray(),
+          (byte) 1
+          // Simple
+      );
+    } else {
+      // Scalar
+      return new DataSpace((byte) 2, false, new int[]{}, new long[]{}, (byte) 0); // Scalar
+    }
+    // TODO null/empty datasets
+  }
 
-	/**
-	 * Gets the total number of elements in this dataspace.
-	 *
-	 * @return the total number of elements in this dataspace
-	 */
-	public long getTotalLength() {
-		// If type == 2 then it's an empty dataset and totalLength should be 0
-		if (type == 2) {
-			return  0;
-		} else {
-			// Calculate the total length by multiplying all dimensions
-			return IntStream.of(dimensions)
-				.mapToLong(Long::valueOf) // Convert to long to avoid int overflow
-				.reduce(1, Math::multiplyExact);
-		}
-	}
+  /**
+   Gets the total number of elements in this dataspace.
+   @return the total number of elements in this dataspace
+   */
+  public long getTotalLength() {
+    // If type == 2 then it's an empty dataset and totalLength should be 0
+    if (type == 2) {
+      return 0;
+    } else {
+      // Calculate the total length by multiplying all dimensions
+      return IntStream.of(dimensions)
+          .mapToLong(Long::valueOf) // Convert to long to avoid int overflow
+          .reduce(1, Math::multiplyExact);
+    }
+  }
 
-	public int getType() {
-		return type;
-	}
+  public int getType() {
+    return type;
+  }
 
-	public int getVersion() {
-		return version;
-	}
+  public int getVersion() {
+    return version;
+  }
 
-	public int[] getDimensions() {
-		return ArrayUtils.clone(dimensions);
-	}
+  public int[] getDimensions() {
+    return ArrayUtils.clone(dimensions);
+  }
 
-	public long [] getMaxSizes() {
-		return ArrayUtils.clone(maxSizes);
-	}
+  public long[] getMaxSizes() {
+    return ArrayUtils.clone(maxSizes);
+  }
 
-	public boolean isMaxSizesPresent() {
-		return maxSizesPresent;
-	}
+  public boolean isMaxSizesPresent() {
+    return maxSizesPresent;
+  }
 
-	public ByteBuffer toBuffer() {
-		BitSet flags = new BitSet(8);
-		flags.set(MAX_SIZES_PRESENT_BIT, maxSizesPresent);
-		BufferBuilder bufferBuilder = new BufferBuilder()
-			.writeByte(version) // Version
-			.writeByte(dimensions.length) // no dims
-			.writeBitSet(flags, 1)
-			.writeByte(type);
+  public ByteBuffer toBuffer() {
+    BitSet flags = new BitSet(8);
+    flags.set(MAX_SIZES_PRESENT_BIT, maxSizesPresent);
+    BufferBuilder bufferBuilder = new BufferBuilder().writeByte(version) // Version
+        .writeByte(dimensions.length) // no dims
+        .writeBitSet(flags, 1).writeByte(type);
 
-        for (int dimension : dimensions) {
-			// TODO should be size of length
-            bufferBuilder.writeLong(dimension);
+    for (int dimension : dimensions) {
+      // TODO should be size of length
+      bufferBuilder.writeLong(dimension);
+    }
+
+    return bufferBuilder.build();
+  }
+
+  /**
+   When derived dataspaces from multiple chunks of data from the dataset
+   are presented, they need to be validated as consistent for the dataset, or enhanced to
+   support the superset of the two.
+   @param ds2
+   the other, presumably compatible data space
+   @return a combined data space
+   */
+  public DataSpace combine(DataSpace ds2) {
+    if (this.type != ds2.type) {
+      throw new HdfException("Can't combine data spaces of different types");
+    }
+    if (this.dimensions.length != ds2.dimensions.length) {
+      throw new HdfException("Can't combine data spaces of incongruent dimensional structure");
+    }
+    int[] newDims = new int[this.dimensions.length];
+
+    for (int i = 0; i < this.dimensions.length; i++) {
+      if (i == 0) {
+        newDims[i] = Math.max(this.dimensions[i], ds2.dimensions[i]);
+      } else {
+        if (this.dimensions[i] != ds2.dimensions[i]) {
+          throw new HdfException(
+              "Can't combine data spaces of incongruent dimensionality at dimension " + i);
         }
+        newDims[i] = this.dimensions[i];
+      }
+    }
 
-		return bufferBuilder.build();
-	}
+    long[] maxSizes = new long[this.maxSizes.length];
+    for (int i = 0; i < this.maxSizes.length; i++) {
+      maxSizes[i] = Math.max(this.maxSizes[i], ds2.maxSizes[i]);
+    }
+
+    return new DataSpace(this.version, this.maxSizesPresent, newDims, maxSizes, this.type);
+
+  }
 }

@@ -10,9 +10,14 @@
 
 package io.jhdf.api;
 
+import io.jhdf.SegmentedDatasetBuilder;
+import io.jhdf.WritableSegmentedDataset;
+
 public interface WritableGroup extends Group, WritableNode {
 
 	WritableDataset putDataset(String name, Object data);
 
 	WritableGroup putGroup(String name);
+
+	WritableDataset putSegmentedDataset(String name, WritableSegmentedDataset dsb);
 }
