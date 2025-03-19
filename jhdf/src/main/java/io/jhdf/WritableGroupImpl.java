@@ -111,7 +111,7 @@ public class WritableGroupImpl extends AbstractWritableNode implements WritableG
 	}
 
 	@Override
-	public WritableDataset putSegmentedDataset(String name, WritableSegmentedDataset dsb) {
+	public WritableDataset putWritableDataset(String name, WritableDataset dsb) {
 		if(StringUtils.isBlank(name)) {
 			throw new IllegalArgumentException("name cannot be null or blank");
 		}

@@ -108,6 +108,13 @@ public class DataSpace {
     // TODO null/empty datasets
   }
 
+  public static DataSpace resized(DataSpace ds, int size) {
+    int[] dims = new int[ds.dimensions.length];
+    System.arraycopy(ds.dimensions, 0, dims, 0, dims.length);
+    dims[0] = size;
+    return new DataSpace(ds.version, ds.maxSizesPresent, dims, ds.maxSizes, ds.type);
+  }
+
   /**
    Gets the total number of elements in this dataspace.
    @return the total number of elements in this dataspace

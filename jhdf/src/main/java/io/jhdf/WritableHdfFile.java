@@ -105,12 +105,12 @@ public class WritableHdfFile implements WritableGroup, AutoCloseable {
 	}
 
 	@Override
-	public WritableDataset putSegmentedDataset(
+	public WritableDataset putWritableDataset(
 			String name,
-			WritableSegmentedDataset wsds
+			WritableDataset wsds
 	)
 	{
-		return rootGroup.putSegmentedDataset(name, wsds);
+		return rootGroup.putWritableDataset(name, wsds);
 	}
 
 	@Override
