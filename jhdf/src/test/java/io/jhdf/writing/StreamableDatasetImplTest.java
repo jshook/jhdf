@@ -12,6 +12,7 @@ package io.jhdf.writing;
 import io.jhdf.HdfFile;
 import io.jhdf.StreamableDatasetImpl;
 import io.jhdf.WritableHdfFile;
+import io.jhdf.api.dataset.StreamableDataset;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,9 +26,9 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-class WritableSegmentedDatasetImplTest {
+class StreamableDatasetImplTest {
 
-  private static final Logger log = LoggerFactory.getLogger(WritableSegmentedDatasetImplTest.class);
+  private static final Logger log = LoggerFactory.getLogger(StreamableDatasetImplTest.class);
 
   @Test
   void testLargeDataset() {
@@ -36,7 +37,7 @@ class WritableSegmentedDatasetImplTest {
     Path hdf5Out;
     try {
       hdf5Out = Files.createTempFile(
-          Path.of("."),
+          Path.of("."), // defaulting to /tmp isn't great for large files testing
           this.getClass().getSimpleName() + "_BiggerThan2GbB_dataset",
           ".hdf5"
       );
@@ -45,22 +46,20 @@ class WritableSegmentedDatasetImplTest {
     }
 
     List<Integer> chunkIdx = List.of(0, 1, 2, 3);
-
     int chunkRows = (1024 * 1024) / Long.BYTES;
     int rowsize = 1024;
-    Supplier sf =
-        new SupplierFunc<Integer, long[][]>(chunkIdx, i -> getArrayData(i, rowsize, chunkRows));
+
+    IterableSource<Integer, long[][]> sf =
+        new IterableSource<>(chunkIdx, i -> getArrayData(i, rowsize, chunkRows));
 
     try (WritableHdfFile out = HdfFile.write(hdf5Out)) {
-      StreamableDatasetImpl sd =
-          new StreamableDatasetImpl(sf, chunkRows * chunkIdx.size(), "", out);
+      StreamableDataset sd = new StreamableDatasetImpl(sf, "", out);
+      sd.setDimensions(new int[]{chunkRows * chunkIdx.size(), rowsize});
       out.putWritableDataset("testname", sd);
     }
   }
 
   private long[][] getArrayData(long offset, int rowsize, int rows) {
-    //    int rowbytes = Long.BYTES * rowsize;
-    //    int rows = (int) (minBytes / rowbytes);
     long[][] data = new long[rows][rowsize];
     for (int i = 0; i < data.length; i++) {
       long[] row = new long[rowsize];
@@ -70,26 +69,40 @@ class WritableSegmentedDatasetImplTest {
     return data;
   }
 
-  public static final class SupplierFunc<I, O> implements Supplier<O> {
+  public static final class IterableSource<I, O> implements Iterable<O> {
 
     private final List<I> list;
     private final Iterator<I> iter;
     private final Function<I, O> f;
 
-    SupplierFunc(List<I> in, Function<I, O> f) {
+    IterableSource(List<I> in, Function<I, O> f) {
       this.list = in;
       this.iter = list.iterator();
       this.f = f;
     }
 
     @Override
-    public O get() {
-      if (iter.hasNext()) {
-        I next = iter.next();
-        System.out.println("returning projected test data for " + next);
-        return f.apply(next);
-      } else {
-        return null;
+    public Iterator<O> iterator() {
+      return new Iter(this.list.iterator(), this.f);
+    }
+
+    public final static class Iter<I, O> implements Iterator<O> {
+      private final Function<I, O> f;
+      private final Iterator<I> iter;
+
+      public Iter(Iterator<I> iterI, Function<I, O> f) {
+        this.f = f;
+        this.iter = iterI;
+      }
+
+      @Override
+      public boolean hasNext() {
+        return iter.hasNext();
+      }
+
+      @Override
+      public O next() {
+        return f.apply(iter.next());
       }
     }
   }
