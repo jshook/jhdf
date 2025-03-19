@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 class StreamableDatasetImplTest {
 
@@ -54,7 +53,7 @@ class StreamableDatasetImplTest {
 
     try (WritableHdfFile out = HdfFile.write(hdf5Out)) {
       StreamableDataset sd = new StreamableDatasetImpl(sf, "", out);
-      sd.setDimensions(new int[]{chunkRows * chunkIdx.size(), rowsize});
+      sd.modifyDimensions(new int[]{chunkRows * chunkIdx.size(), rowsize});
       out.putWritableDataset("testname", sd);
     }
   }

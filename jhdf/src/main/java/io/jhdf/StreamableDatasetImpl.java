@@ -134,13 +134,13 @@ public class StreamableDatasetImpl extends AbstractWritableNode implements Strea
     return this.computedDataSpace;
   }
 
-  private void ensureComputeEnabled(String method) {
+  private void ensureComputeEnabled(String method, String... additional) {
     if (!computeEnabled) {
       throw new HdfException("For streaming datasets, some properties are not available without "
                              + "(possibly intenstive) compute over the input stream. If you want "
                              + "to use the " + method + " method, then you can call "
                              + ".enableCompute() first. Note that such methods will not be "
-                             + "efficient for large datasets.");
+                             + "efficient for large datasets. " + String.join(",", additional));
     }
   }
 
@@ -164,14 +164,19 @@ public class StreamableDatasetImpl extends AbstractWritableNode implements Strea
     if (userDimensionedSpace != null) {
       return userDimensionedSpace.getDimensions();
     } else {
-      ensureComputeEnabled("getDimensions()");
+      ensureComputeEnabled(
+          "getDimensions()",
+          "Alternately, for dimensions, you may set them with"
+          + " modifyDimensions first to assume and then "
+          + "confirm dimensions during streaming to storage."
+      );
       return getDataSpace().getDimensions();
     }
   }
 
   @Override
-  public void setDimensions(int[] dimensions) {
-    this.userDimensionedSpace = DataSpace.resize(this.dataSpacePrototype, dimensions);
+  public void modifyDimensions(int[] dimensions) {
+    this.userDimensionedSpace = DataSpace.modifyDimensions(this.dataSpacePrototype, dimensions);
     logger.debug("user dimensions:" + userDimensionedSpace);
   }
 

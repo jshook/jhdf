@@ -8,7 +8,7 @@ import io.jhdf.object.message.DataSpace;
 
 /**
  Interface for streamable datasets
- </hr>
+ <hr/>
 
  <p>This type allows for users to provide arbitrarily large datasets during Hdf5 node
  construction. The dataset is not provided as a whole as with
@@ -17,7 +17,7 @@ import io.jhdf.object.message.DataSpace;
 
  <h2>Usage and Caveats</h2>
 
-<p>The structure of the chunks provided should be congruent to each other, divided among the
+ <p>The structure of the chunks provided should be congruent to each other, divided among the
  major dimension as slices of an array. The other dimensions are not meant to be partitioned in
  any way.</p>
 
@@ -30,19 +30,18 @@ import io.jhdf.object.message.DataSpace;
  error to be thrown. If the dimensions have been set, then they will be cross-checked at the time
  the dataset is written and an error will be thrown if they do not match.
  </p>
-
  @author Jonathan Shook */
 public interface StreamableDataset extends WritableDataset {
 
   /**
-   Sets the dimensions of this dataset. For StreamableDatasets, this can be set before the data
-   is buffered later, so that API calls can see the dimensions. However, if the dimensions
-   do not match the dimensions of the data as calculated during writing, then an exception will
-   be thrown. This means that for each chunk of data provided, All dimensions except dimension
-   0 must match, and that after buffering data to storage, the primary dimension must match the total
+   Sets the dimensions of this dataset, partially or fully. For StreamableDatasets, this can be set
+   before the data is buffered later, so that API calls can see the dimensions. However, if the
+   dimensions do not match the dimensions of the data as calculated during writing, then an exception
+   will be thrown. This means that for each chunk of data provided, All dimensions except dimension 0
+   must match, and that after buffering data to storage, the primary dimension must match the total
    number of array elements of dimension 0 written.
    */
-  void setDimensions(int[] dimensions);
+  void modifyDimensions(int[] dimensions);
 
   /**
    Creates a new StreamableDataset from the given chunk supplier. The chunk supplier must not be
@@ -52,7 +51,6 @@ public interface StreamableDataset extends WritableDataset {
    before the constructor returns. Thus, basic {@link io.jhdf.object.datatype.DataType} and basic
    {@link DataSpace} information is available. However, some elements, like total dimensions and
    actual field width padding will not be fully accurate until the dataset is written.
-
    @param chunkSupplier
    The source of data chunks to be written to the dataset.
    @param name

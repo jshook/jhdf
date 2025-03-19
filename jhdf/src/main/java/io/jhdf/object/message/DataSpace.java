@@ -118,7 +118,7 @@ public class DataSpace {
    the new dimensions
    @return the resized dataset
    */
-  public static DataSpace resize(DataSpace ds, int[] dimensions) {
+  public static DataSpace modifyDimensions(DataSpace ds, int[] dimensions) {
     int[] newdims = Arrays.copyOf(ds.dimensions, ds.getDimensions().length);
     System.arraycopy(dimensions, 0, newdims, 0, dimensions.length);
     long[] newsizes = Arrays.copyOf(ds.maxSizes, ds.maxSizes.length);
